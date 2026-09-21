@@ -1,6 +1,6 @@
 spring:
   r2dbc:
-    url: r2dbc:postgresql://localhost:5433/testdb
+    url: r2dbc:postgresql://localhost:5432/testdb
     username: postgres
     password: postgres   # alineado con docker-compose.yml
   sql:
@@ -33,5 +33,5 @@ springdoc:
 
 logging:
   level:
-    com.example.demo: INFO
+    com.despachoreactivo: INFO
     org.springframework.r2dbc.core: DEBUG    # muestra el SQL emitido
