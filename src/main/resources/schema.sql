@@ -3,7 +3,6 @@
 
 DROP TABLE IF EXISTS paquete;
 DROP TABLE IF EXISTS despacho;
-DROP TABLE IF EXISTS vehiculo;
 
 CREATE TABLE vehiculo (
     id           BIGINT PRIMARY KEY,

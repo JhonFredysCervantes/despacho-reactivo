@@ -5,7 +5,7 @@ spring:
     password: postgres   # alineado con docker-compose.yml
   sql:
     init:
-      mode: always
+      mode: never
 
 server:
   port: 8081
