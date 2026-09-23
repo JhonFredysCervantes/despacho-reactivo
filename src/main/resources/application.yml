@@ -5,7 +5,8 @@ spring:
     password: postgres   # alineado con docker-compose.yml
   sql:
     init:
-      mode: never
+      mode: always
+      data-locations: classpath:schema.sql
 
 server:
   port: 8081
@@ -15,7 +16,7 @@ app:
     base-url: http://localhost:8081     # el simulador vive en la misma app
     pricing-timeout: 2s
     fraud-timeout: 800ms
-  reservation-ttl: 2m
+  reservation-ttl: 15m
   expiry-interval: 30s
   risk-threshold: 80
   default-risk-score: 50
