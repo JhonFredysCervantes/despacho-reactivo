@@ -42,6 +42,7 @@ public class VehiculoService {
                         vehiculoRepository.liberarCupo(id, peso)
                 );
     }
+
     public Mono<Vehiculo> descontarCupoConCompensacion(
             Long id,
             Integer peso,
@@ -78,7 +79,7 @@ public class VehiculoService {
 
                                         return liberarCupo(vehiculoId, peso)
                                                 .then(Mono.error(
-                                                        new ZonaRiesgosaException()
+                                                        new ZonaRiesgosaException("Zona de alto riesgo detectada, score: " + resultado.riesgo().score())
                                                 ));
                                     }
 
