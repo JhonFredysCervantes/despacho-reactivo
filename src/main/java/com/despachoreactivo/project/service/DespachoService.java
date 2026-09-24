@@ -77,7 +77,9 @@ public class DespachoService {
                             despachoGuardado.getId(),
                             "RECIBIDO",
                             "RECIBIDO",
-                            "Despacho recibido con " + paquetes.size() + " paquetes"
+                            despacho.getCiudad(),
+                            "Despacho recibido con " + paquetes.size() + " paquetes",
+                            despacho.totalPaquetes()
                     ));
 
                     List<Paquete> paquetesConDespacho = paquetes.stream()
@@ -156,8 +158,10 @@ public class DespachoService {
                                 despachoAsignado.getId(),
                                 "ASIGNADO",
                                 "ASIGNADO",
+                                despacho.getCiudad(),
                                 "Despacho asignado, tarifa: " + resultado.tarifa().tarifa() + 
-                                ", riesgo: " + resultado.riesgo().score()
+                                ", riesgo: " + resultado.riesgo().score(),
+                                despacho.totalPaquetes()
                         ));
                         return Mono.just(despachoAsignado);
                     });
@@ -204,7 +208,9 @@ public class DespachoService {
                                         despachoConfirmado.getId(),
                                         "EN_RUTA",
                                         "EN_RUTA",
-                                        "Despacho confirmado y en ruta"
+                                        despacho.getCiudad(),
+                                        "Despacho confirmado y en ruta",
+                                        despacho.totalPaquetes()
                                 ));
                                 return Mono.just(despachoConfirmado);
                             });

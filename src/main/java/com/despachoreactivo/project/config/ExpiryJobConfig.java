@@ -45,7 +45,9 @@ public class ExpiryJobConfig {
                                     despacho.getId(),
                                     "CANCELADO",
                                     "CANCELADO",
-                                    "Despacho expirado por tiempo de espera"
+                                    despacho.getCiudad(),
+                                    "Despacho expirado por tiempo de espera",
+                                    despacho.totalPaquetes()
                             ));
                         })
                 )
