@@ -6,14 +6,14 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.publisher.Sinks.Many;
 
-import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class EventBus {
-    
+
     private final Many<DespachoEvent> sink = Sinks.many()
             .multicast()
             .onBackpressureBuffer();
@@ -28,11 +28,12 @@ public class EventBus {
     }
 
     public Flux<DespachoEvent> getEvents() {
-        return sink.asFlux();
+        return tableroHot
+                .onBackpressureLatest();
     }
 
     public Flux<DespachoEvent> getEventsByDespachoId(Long despachoId) {
-        return sink.asFlux()
+        return tableroHot
                 .filter(event -> event.getDespachoId().equals(despachoId));
     }
 
@@ -41,33 +42,32 @@ public class EventBus {
                 .map(this::toReport)
                 .scan(new LinkedHashMap<String, ReporteCiudadEvent>(), (acumulado, actual) -> {
                     LinkedHashMap<String, ReporteCiudadEvent> copia = new LinkedHashMap<>(acumulado);
-                    ReporteCiudadEvent existente = copia.get(actual.ciudad());
-                    copia.put(actual.ciudad(), existente == null ? actual : existente.sumar(actual));
+                    copia.merge(actual.ciudad(), actual, ReporteCiudadEvent::sumar);
                     return copia;
                 })
                 .skip(1)
-                .map(mapa -> mapa.get(mapa.keySet().stream().reduce((a, b) -> b).orElse("")))
-                .filter(reporte -> reporte != null);
+                .flatMapIterable(Map::values)
+                .onBackpressureLatest();
     }
 
     public Mono<List<ReporteCiudadEvent>> reporteCiudadesSnapshot() {
         return tableroHot
-                .filter(evento -> evento.getEstado().equals("ENTREGADO"))
-                .take(10)
                 .map(this::toReport)
-                .limitRate(10)
-                .collectMultimap(ReporteCiudadEvent::ciudad)
-                .map(this::sumarPorCiudad);
+                .reduce(new LinkedHashMap<String, Integer>(), (acumulado, actual) -> {
+                    acumulado.merge(actual.ciudad(), actual.totalPaquetes(), Integer::sum);
+                    return acumulado;
+                })
+                .map(this::toReporteCiudadSnapshot);
     }
 
     private ReporteCiudadEvent toReport(DespachoEvent evento) {
         return new ReporteCiudadEvent(evento.getCiudad(), evento.getTotalPaquetes());
     }
 
-    private List<ReporteCiudadEvent> sumarPorCiudad(Map<String, Collection<ReporteCiudadEvent>> porCiudad) {
+    private List<ReporteCiudadEvent> toReporteCiudadSnapshot(Map<String, Integer> porCiudad) {
         return porCiudad.entrySet().stream()
-                .map(entry -> entry.getValue().stream()
-                        .reduce(new ReporteCiudadEvent(entry.getKey(), 0), ReporteCiudadEvent::sumar))
+                .map(entry -> new ReporteCiudadEvent(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparing(ReporteCiudadEvent::ciudad))
                 .toList();
     }
 }
