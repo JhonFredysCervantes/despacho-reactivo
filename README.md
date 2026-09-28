@@ -1,18 +1,18 @@
-# 📦 Despacho Reactivo
+# Despacho Reactivo
 
 Servicio backend reactivo para gestión de despachos y entregas, construido con **Spring Boot WebFlux** y **R2DBC**. 
 
-## 🎯 Descripción
+## Descripción
 
 Sistema de distribución de paquetes que utiliza programación reactiva para manejar:
-- ✅ Creación y seguimiento de despachos
-- ✅ Gestión de vehículos y cupo disponible
-- ✅ Stream de eventos en tiempo real (SSE)
-- ✅ Reportes por ciudades
-- ✅ Validación de zonas de riesgo y tarificación
-- ✅ Resiliencia con compensación de transacciones
+- Creación y seguimiento de despachos
+- Gestión de vehículos y cupo disponible
+- Stream de eventos en tiempo real (SSE)
+- Reportes por ciudades
+- Validación de zonas de riesgo y tarificación
+- Resiliencia con compensación de transacciones
 
-## 🛠 Stack Tecnológico
+## Stack Tecnológico
 
 - **Java 17**
 - **Spring Boot 4.1.1** (WebFlux, Data R2DBC)
@@ -21,14 +21,14 @@ Sistema de distribución de paquetes que utiliza programación reactiva para man
 - **Lombok**
 - **JUnit 5 + Reactor Test**
 
-## 📋 Requisitos Previos
+## Requisitos Previos
 
 - Java 17+
 - Docker & Docker Compose
 - Gradle (incluido con `gradlew`)
 - Git
 
-## 🚀 Levantar el Servicio
+## Levantar el Servicio
 
 ### 1. Clonar el repositorio
 ```bash
@@ -59,20 +59,17 @@ docker ps
 
 La aplicación estará disponible en: **http://localhost:8081**
 
-## 🧪 Probar los Endpoints
+## Probar los Endpoints
 
-### Opción A: Usando Swagger UI
-Abre en el navegador: http://localhost:8081/swagger-ui.html
+### Usando cURL
 
-### Opción B: Usando cURL
-
-#### 1️⃣ Listar vehículos disponibles
+#### 1️ Listar vehículos disponibles
 ```bash
 curl -X GET "http://localhost:8081/api/vehiculos" \
   -H "Content-Type: application/json"
 ```
 
-#### 1️⃣ bis Carga masiva de vehículos (NDJSON) — Windows / PowerShell
+#### bis Carga masiva de vehículos (NDJSON) — Windows / PowerShell
 
 En PowerShell usa **`curl.exe`** (no el alias `curl`). La app debe estar en marcha (`./gradlew bootRun`) y PostgreSQL arriba (`docker compose up -d`).
 
@@ -122,7 +119,7 @@ curl.exe -i -X POST "http://localhost:8081/api/vehiculos/bulk" -H "Content-Type:
 
 En Linux/macOS/Git Bash puedes usar el mismo `curl` con `--data-binary "@vehiculos.ndjson"` y crear el `.ndjson` con un editor (una línea JSON por vehículo).
 
-#### 2️⃣ Crear un despacho
+#### Crear un despacho
 
 Debe existir al menos un vehículo en la misma **ciudad** con cupo (p. ej. tras el bulk del paso 1 bis). Body alineado con `Despacho` + `Paquete`:
 
@@ -146,35 +143,35 @@ PowerShell (una línea con `curl.exe`):
 curl.exe -X POST "http://localhost:8081/api/despachos" -H "Content-Type: application/json" -H "X-Traza-Id: trace-123" -d "{\"clienteId\":1,\"ciudad\":\"BOG\",\"paquetes\":[{\"descripcion\":\"Caja mediana\",\"pesoKg\":50}]}"
 ```
 
-#### 3️⃣ Confirmar un despacho
+#### Confirmar un despacho
 ```bash
 curl -X POST "http://localhost:8081/api/despachos/1/confirm" \
   -H "X-Traza-Id: trace-123"
 ```
 
-#### 4️⃣ Obtener eventos de un despacho (SSE)
+#### Obtener eventos de un despacho (SSE)
 ```bash
 curl -N "http://localhost:8081/api/despachos/1/events" \
   -H "X-Traza-Id: trace-123"
 ```
 
-#### 5️⃣ Reporte de ciudades (snapshot)
+####  Reporte de ciudades (snapshot)
 ```bash
 curl -X GET "http://localhost:8081/api/reports/ciudades" \
   -H "Content-Type: application/json"
 ```
 
-#### 6️⃣ Reporte de ciudades (stream NDJSON)
+####  Reporte de ciudades (stream NDJSON)
 ```bash
 curl -N "http://localhost:8081/api/reports/ciudades/stream"
 ```
 
-#### 7️⃣ Tablero en tiempo real (SSE)
+####  Tablero en tiempo real (SSE)
 ```bash
 curl -N "http://localhost:8081/api/ops/tablero"
 ```
 
-## 🧪 Ejecutar Tests
+##  Ejecutar Tests
 
 ### Tests unitarios (sin PostgreSQL)
 ```bash
@@ -212,7 +209,7 @@ open build/reports/tests/test/index.html  # macOS
 start build/reports/tests/test/index.html # Windows
 ```
 
-## ⚛️ Elementos reactivos (trazabilidad)
+##  Elementos reactivos (trazabilidad)
 
 | Elemento | Rol | Ubicación |
 |----------|-----|-----------|
@@ -228,9 +225,9 @@ start build/reports/tests/test/index.html # Windows
 | `WebClient` + `retryWhen` / `timeout` | Llamadas externas reactivas con resiliencia | `ExternalService.java:24-37`, `ExternalService.java:59-68` |
 | `Mono.zip` (servicios externos) | Tarifa, clima y riesgo en paralelo | `DespachoExternalService.java:33` |
 
-Decisiones de diseño ampliadas: [`taller-entrega/DECISIONES.md`](taller-entrega/DECISIONES.md) (completar antes de entregar).
+Decisiones de diseño ampliadas: [`taller-entrega/DECISIONES.md`](taller-entrega/DECISIONES.md) 
 
-## 📂 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 src/
@@ -257,7 +254,7 @@ src/
             └── DespachoExternalServiceTest.java
 ```
 
-## 🔧 Configuración
+##  Configuración
 
 Archivo: `src/main/resources/application.yml`
 
@@ -269,7 +266,7 @@ Archivo: `src/main/resources/application.yml`
 | `app.reservation-ttl` | 15m | TTL de reservas |
 | `springdoc.api-docs.path` | /v3/api-docs | OpenAPI JSON |
 
-## 📡 API Principales
+##  API Principales
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
