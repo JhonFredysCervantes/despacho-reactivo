@@ -90,4 +90,6 @@ public class Despacho {
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    public int totalPaquetes() { return paquetes != null ? paquetes.size() : 0; }
 }

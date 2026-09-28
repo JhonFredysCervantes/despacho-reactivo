@@ -33,7 +33,7 @@ public class ExpiryJobConfig {
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(tick -> despachoRepository.findAll()
                         .filter(despacho -> "ASIGNADO".equals(despacho.getEstado()))
-                        .filter(despacho -> despacho.getExpiraEn() != null && 
+                        .filter(despacho -> despacho.getExpiraEn() != null &&
                                 despacho.getExpiraEn().isBefore(Instant.now()))
                         .doOnNext(despacho -> {
                             despacho.setEstado("CANCELADO");
@@ -45,7 +45,9 @@ public class ExpiryJobConfig {
                                     despacho.getId(),
                                     "CANCELADO",
                                     "CANCELADO",
-                                    "Despacho expirado por tiempo de espera"
+                                    "Despacho expirado por tiempo de espera",
+                                    despacho.getCiudad(),
+                                    despacho.totalPaquetes()
                             ));
                         })
                 )
