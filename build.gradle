@@ -37,8 +37,27 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
-	// Evita condiciones de carrera al escribir resultados (común en Windows / IDE).
+	description = 'Tests unitarios (sin PostgreSQL)'
+	useJUnitPlatform {
+		excludeTags 'integration'
+	}
+	maxParallelForks = 1
+	jvmArgs '-Dfile.encoding=UTF-8'
+	testLogging {
+		events 'failed', 'skipped'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('integrationTest', Test) {
+	description = 'Tests de integración (requieren PostgreSQL: docker compose up -d)'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	shouldRunAfter tasks.named('test')
 	maxParallelForks = 1
 	jvmArgs '-Dfile.encoding=UTF-8'
 	testLogging {

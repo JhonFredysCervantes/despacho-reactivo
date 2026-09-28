@@ -114,9 +114,23 @@ curl -N "http://localhost:8081/api/ops/tablero"
 
 ## 🧪 Ejecutar Tests
 
-### Todos los tests
+### Tests unitarios (sin PostgreSQL)
 ```bash
 ./gradlew test
+```
+Incluye servicios, EventBus y manejo de errores con mocks. **No** levanta Spring ni base de datos.
+
+### Tests de integración (con PostgreSQL)
+```bash
+docker compose up -d
+./gradlew integrationTest
+```
+Carga el contexto Spring (`ProjectApplicationTests`). Mismas credenciales que `application.yml` (`testdb`, `postgres`/`postgres`).
+
+### Suite completa (evaluación)
+```bash
+docker compose up -d
+./gradlew test integrationTest
 ```
 
 ### Tests específicos de EventBus

@@ -13,18 +13,6 @@ import java.util.UUID;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    public Map<String, Object> manejarVehiculoNoExiste(VehiculoNoExisteException ex) {
-        return crearErrorResponseBasica("Vehículo no existe", HttpStatus.NOT_FOUND.value());
-    }
-
-    public Map<String, Object> manejarCupoInsuficiente(CupoInsuficienteException ex) {
-        return crearErrorResponseBasica("Cupo insuficiente para el vehículo", HttpStatus.CONFLICT.value());
-    }
-
-    public Map<String, Object> manejarZonaRiesgosa(ZonaRiesgosaException ex) {
-        return crearErrorResponseBasica("La zona tiene un nivel de riesgo demasiado alto", HttpStatus.UNPROCESSABLE_ENTITY.value());
-    }
-
     private String getTrazaId(ServerWebExchange exchange) {
         String trazaId = exchange.getRequest().getHeaders().getFirst("X-Traza-Id");
         return trazaId != null ? trazaId : UUID.randomUUID().toString();
@@ -108,14 +96,6 @@ public class GlobalExceptionHandler {
                 "trazaId", trazaId,
                 "instante", Instant.now().toString(),
                 "status", status
-        );
-    }
-
-    private Map<String, Object> crearErrorResponseBasica(String error, int status) {
-        return Map.of(
-                "status", status,
-                "error", error,
-                "timestamp", Instant.now().toString()
         );
     }
 }
