@@ -123,15 +123,27 @@ curl.exe -i -X POST "http://localhost:8081/api/vehiculos/bulk" -H "Content-Type:
 En Linux/macOS/Git Bash puedes usar el mismo `curl` con `--data-binary "@vehiculos.ndjson"` y crear el `.ndjson` con un editor (una línea JSON por vehículo).
 
 #### 2️⃣ Crear un despacho
+
+Debe existir al menos un vehículo en la misma **ciudad** con cupo (p. ej. tras el bulk del paso 1 bis). Body alineado con `Despacho` + `Paquete`:
+
 ```bash
 curl -X POST "http://localhost:8081/api/despachos" \
   -H "Content-Type: application/json" \
+  -H "X-Traza-Id: trace-123" \
+  -H "Idempotency-Key: demo-despacho-001" \
   -d '{
-    "peso": 100,
-    "origen": "Bogota",
-    "destino": "Medellin",
-    "clienteId": 1
+    "clienteId": 1,
+    "ciudad": "BOG",
+    "paquetes": [
+      { "descripcion": "Caja mediana", "pesoKg": 50 }
+    ]
   }'
+```
+
+PowerShell (una línea con `curl.exe`):
+
+```powershell
+curl.exe -X POST "http://localhost:8081/api/despachos" -H "Content-Type: application/json" -H "X-Traza-Id: trace-123" -d "{\"clienteId\":1,\"ciudad\":\"BOG\",\"paquetes\":[{\"descripcion\":\"Caja mediana\",\"pesoKg\":50}]}"
 ```
 
 #### 3️⃣ Confirmar un despacho
@@ -200,37 +212,48 @@ open build/reports/tests/test/index.html  # macOS
 start build/reports/tests/test/index.html # Windows
 ```
 
+## ⚛️ Elementos reactivos (trazabilidad)
+
+| Elemento | Rol | Ubicación |
+|----------|-----|-----------|
+| `concatMap` reserva de cupo paquete a paquete (saga) | Orden determinista + compensación LIFO | `AsignacionSaga.java:40`, `AsignacionSaga.java:58` |
+| `concatMap` persistencia de paquetes en TX | Un insert tras otro dentro de la transacción | `DespachoService.java:100-101` |
+| `concatMap` bulk NDJSON por lotes | No saturar la BD en carga masiva | `VehiculoBulkService.java:26` |
+| `TransactionalOperator` | TX acotada a guardar despacho + paquetes | `DespachoService.java:108` |
+| `Sinks.many().multicast()` + `publish().refCount()` | EventBus **hot** compartido entre suscriptores | `EventBus.java:19-26` |
+| `onBackpressureLatest` | Tablero SSE y reportes: último estado, no cola infinita | `EventBus.java:24`, `EventBus.java:37`, `EventBus.java:55` |
+| `scan` + `flatMapIterable` | Reporte ciudades en stream (estado acumulado) | `EventBus.java:48-54` |
+| `takeUntil` | Cierra SSE de un despacho en estado terminal | `DespachoController.java:52-53` |
+| `Flux.interval` + `onBackpressureDrop` | Job de expiración sin acumular ticks | `ExpiryJobConfig.java:51-57` |
+| `WebClient` + `retryWhen` / `timeout` | Llamadas externas reactivas con resiliencia | `ExternalService.java:24-37`, `ExternalService.java:59-68` |
+| `Mono.zip` (servicios externos) | Tarifa, clima y riesgo en paralelo | `DespachoExternalService.java:33` |
+
+Decisiones de diseño ampliadas: [`taller-entrega/DECISIONES.md`](taller-entrega/DECISIONES.md) (completar antes de entregar).
+
 ## 📂 Estructura del Proyecto
 
 ```
 src/
 ├── main/
 │   ├── java/com/despachoreactivo/project/
-│   │   ├── controller/           # REST Controllers
-│   │   │   ├── DespachoController.java
-│   │   │   ├── VehiculoController.java
-│   │   │   ├── ReporteController.java
-│   │   │   └── TableroController.java
-│   │   ├── service/              # Lógica de negocio
-│   │   │   ├── DespachoService.java
-│   │   │   ├── VehiculoService.java
-│   │   │   └── DespachoExternalService.java
-│   │   ├── repository/           # Acceso a datos (R2DBC)
-│   │   ├── model/                # Entidades
-│   │   ├── event/                # EventBus reactivo
-│   │   │   ├── EventBus.java
-│   │   │   ├── DespachoEvent.java
-│   │   │   └── ReporteCiudadEvent.java
-│   │   └── exception/            # Manejo de excepciones
+│   │   ├── controller/           # REST (despachos, vehículos, bulk, reportes, tablero)
+│   │   ├── service/              # DespachoService, AsignacionSaga, Vehiculo*, ReportService
+│   │   ├── config/               # ExpiryJobConfig, WebClient
+│   │   ├── repository/           # R2DBC (+ SQL custom cupo)
+│   │   ├── event/                # EventBus hot
+│   │   ├── external/             # Simulador /external + ExternalService
+│   │   └── exception/
 │   └── resources/
-│       ├── application.yml       # Configuración
-│       └── schema.sql            # DDL de base de datos
+│       ├── application.yml
+│       └── schema.sql            # despacho, paquete, vehiculo, idempotency_key
 └── test/
     └── java/com/despachoreactivo/project/
-        ├── event/
-        │   └── EventBusTest.java  # Tests del EventBus
+        ├── ProjectApplicationTests.java   # @Tag("integration")
+        ├── event/EventBusTest.java
+        ├── exception/GlobalExceptionHandlerTest.java
         └── service/
             ├── VehiculoServiceTest.java
+            ├── VehiculoBulkServiceTest.java
             └── DespachoExternalServiceTest.java
 ```
 
@@ -241,7 +264,7 @@ Archivo: `src/main/resources/application.yml`
 | Propiedad | Valor | Descripción |
 |-----------|-------|-------------|
 | `server.port` | 8081 | Puerto de la aplicación |
-| `spring.r2dbc.url` | localhost:5432 | Base de datos PostgreSQL |
+| `spring.r2dbc.url` | `r2dbc:postgresql://localhost:5432/testdb` | PostgreSQL (misma DB que `docker-compose`: `testdb`) |
 | `app.risk-threshold` | 80 | Umbral de riesgo para entregas |
 | `app.reservation-ttl` | 15m | TTL de reservas |
 | `springdoc.api-docs.path` | /v3/api-docs | OpenAPI JSON |
@@ -262,12 +285,15 @@ Archivo: `src/main/resources/application.yml`
 
 ### Conectar a PostgreSQL directamente
 ```bash
-docker exec -it postgres_r2dbc psql -U postgres -d postgres
+docker exec -it postgres_r2dbc psql -U postgres -d testdb
 ```
 
 ### Consultas útiles
 ```sql
-SELECT * FROM despachos;
-SELECT * FROM vehiculos;
-SELECT COUNT(*) as total_eventos FROM despachos WHERE estado = 'ENTREGADO';
+SELECT * FROM despacho ORDER BY id DESC LIMIT 10;
+SELECT * FROM paquete WHERE despacho_id = 1;
+SELECT id, placa, ciudad, cupo_kg, reservado_kg FROM vehiculo;
+SELECT COUNT(*) AS entregados FROM despacho WHERE estado = 'ENTREGADO';
 ```
+
+> **Swagger UI:** la ruta está en `application.yml`, pero hace falta la dependencia `springdoc-openapi` en `build.gradle` para que la UI responda en `/swagger-ui.html`.
