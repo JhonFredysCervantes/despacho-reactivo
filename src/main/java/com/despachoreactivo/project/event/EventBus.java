@@ -14,6 +14,8 @@ import java.util.Map;
 @Component
 public class EventBus {
 
+    private Map<String, Integer> ciudadesState = new LinkedHashMap<>();
+
     private final Many<DespachoEvent> sink = Sinks.many()
             .multicast()
             .onBackpressureBuffer();
@@ -25,6 +27,9 @@ public class EventBus {
 
     public void emit(DespachoEvent event) {
         sink.tryEmitNext(event);
+        if ("RECIBIDO".equals(event.getEstado())) {
+            ciudadesState.merge(event.getCiudad(), event.getTotalPaquetes(), Integer::sum);
+        }
     }
 
     public Flux<DespachoEvent> getEvents() {
@@ -51,12 +56,7 @@ public class EventBus {
     }
 
     public Mono<List<ReporteCiudadEvent>> reporteCiudadesSnapshot() {
-        return tableroHot
-                .map(this::toReport)
-                .reduce(new LinkedHashMap<String, Integer>(), (acumulado, actual) -> {
-                    acumulado.merge(actual.ciudad(), actual.totalPaquetes(), Integer::sum);
-                    return acumulado;
-                })
+        return Mono.just(ciudadesState)
                 .map(this::toReporteCiudadSnapshot);
     }
 
