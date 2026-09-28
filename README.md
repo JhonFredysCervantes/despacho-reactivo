@@ -295,5 +295,3 @@ SELECT * FROM paquete WHERE despacho_id = 1;
 SELECT id, placa, ciudad, cupo_kg, reservado_kg FROM vehiculo;
 SELECT COUNT(*) AS entregados FROM despacho WHERE estado = 'ENTREGADO';
 ```
-
-> **Swagger UI:** la ruta está en `application.yml`, pero hace falta la dependencia `springdoc-openapi` en `build.gradle` para que la UI responda en `/swagger-ui.html`.
