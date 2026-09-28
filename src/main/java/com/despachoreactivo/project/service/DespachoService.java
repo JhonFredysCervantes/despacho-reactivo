@@ -6,9 +6,11 @@ import com.despachoreactivo.project.exception.CupoInsuficienteException;
 import com.despachoreactivo.project.exception.DespachoNoExisteException;
 import com.despachoreactivo.project.exception.EstadoInvalidoException;
 import com.despachoreactivo.project.exception.ValidacionException;
+import com.despachoreactivo.project.exception.VehiculoNoExisteException;
 import com.despachoreactivo.project.exception.ZonaRiesgosaException;
 import com.despachoreactivo.project.model.Despacho;
 import com.despachoreactivo.project.model.Paquete;
+import com.despachoreactivo.project.model.Vehiculo;
 import com.despachoreactivo.project.repository.DespachoRepository;
 import com.despachoreactivo.project.repository.PaqueteRepository;
 import com.despachoreactivo.project.repository.VehiculoRepository;
@@ -80,16 +82,24 @@ public class DespachoService {
                             "Despacho recibido con " + paquetes.size() + " paquetes"
                     ));
 
+                    List<Long> vehiculosSolicitados = paquetes.stream()
+                            .map(Paquete::getVehiculoId)
+                            .collect(Collectors.toList());
+
                     List<Paquete> paquetesConDespacho = paquetes.stream()
                             .peek(p -> p.setDespachoId(despachoGuardado.getId()))
                             .peek(p -> p.setEstado("RESERVADO"))
                             .peek(p -> p.setCreatedAt(Instant.now()))
+                            .peek(p -> p.setVehiculoId(null)) // la asignación real ocurre en el saga, tras validar
                             .collect(Collectors.toList());
 
                     return Flux.fromIterable(paquetesConDespacho)
-                            .flatMap(paqueteRepository::save)
+                            .concatMap(paqueteRepository::save) // concatMap preserva el orden para poder correlacionar con vehiculosSolicitados
                             .collectList()
                             .flatMap(paquetesGuardados -> {
+                                for (int i = 0; i < paquetesGuardados.size(); i++) {
+                                    paquetesGuardados.get(i).setVehiculoId(vehiculosSolicitados.get(i));
+                                }
                                 despachoGuardado.setPaquetes(paquetesGuardados);
                                 return reservarCupoSaga(despachoGuardado, paquetesGuardados, totalPeso);
                             });
@@ -101,12 +111,7 @@ public class DespachoService {
         List<Long> reservasRealizadas = Collections.synchronizedList(new ArrayList<>());
 
         return Flux.fromIterable(paquetes)
-                .flatMap(paquete -> vehiculoRepository.findAll()
-                        .filter(v -> v.getCiudad().equals(despacho.getCiudad()))
-                        .filterWhen(v -> vehiculoRepository.findById(v.getId())
-                                .map(vehiculo -> vehiculo.getCupoKg() >= paquete.getPesoKg()))
-                        .next()
-                        .switchIfEmpty(Mono.error(new CupoInsuficienteException()))
+                .flatMap(paquete -> buscarVehiculoParaPaquete(despacho, paquete)
                         .flatMap(vehiculoAsignado -> {
                             paquete.setVehiculoId(vehiculoAsignado.getId());
                             return paqueteRepository.save(paquete)
@@ -124,6 +129,30 @@ public class DespachoService {
                     despacho.setPaquetes(paquetesActualizados);
                     return consultarServiciosExternos(despacho);
                 });
+    }
+
+    private Mono<Vehiculo> buscarVehiculoParaPaquete(Despacho despacho, Paquete paquete) {
+        if (paquete.getVehiculoId() != null) {
+            return vehiculoRepository.findById(paquete.getVehiculoId())
+                    .switchIfEmpty(Mono.error(new VehiculoNoExisteException()))
+                    .flatMap(vehiculo -> {
+                        if (!vehiculo.getCiudad().equals(despacho.getCiudad())) {
+                            return Mono.error(new ValidacionException(
+                                    "El vehículo " + vehiculo.getId() + " no pertenece a la ciudad " + despacho.getCiudad()));
+                        }
+                        if (vehiculo.getCupoKg() < paquete.getPesoKg()) {
+                            return Mono.error(new CupoInsuficienteException());
+                        }
+                        return Mono.just(vehiculo);
+                    });
+        }
+
+        return vehiculoRepository.findAll()
+                .filter(v -> v.getCiudad().equals(despacho.getCiudad()))
+                .filterWhen(v -> vehiculoRepository.findById(v.getId())
+                        .map(vehiculo -> vehiculo.getCupoKg() >= paquete.getPesoKg()))
+                .next()
+                .switchIfEmpty(Mono.error(new CupoInsuficienteException()));
     }
 
     private Mono<Despacho> consultarServiciosExternos(Despacho despacho) {
