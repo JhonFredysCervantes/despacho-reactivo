@@ -68,6 +68,7 @@ public class Despacho {
     public void setCiudad(String ciudad) { this.ciudad = ciudad; }
 
     public List<Paquete> getPaquetes() { return paquetes; }
+    public int totalPaquetes() { return paquetes != null ? paquetes.size() : 0; }
     public void setPaquetes(List<Paquete> paquetes) { this.paquetes = paquetes; }
 
     public String getEstado() { return estado; }

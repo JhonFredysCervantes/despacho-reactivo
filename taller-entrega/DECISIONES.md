@@ -49,9 +49,9 @@
 
 ## Decisiones propias
 
-## 5. <título>
+## 5. Expiración con Flux.interval vs cola de mensajes
 
-- **Elegimos:** <>
-- **Descartamos:** <>
-- **Porque:** <>
-- **Se rompe si:** <>
+- **Elegimos:** <job reactivo periódico (ExpiryJobConfig) que detecta despachos ASIGNADO vencidos, compensa cupo, persiste EXPIRADO y emite evento al EventBus>
+- **Descartamos:** <broker (Kafka/Rabbit) o scheduler externo solo para el TTL de reserva en este taller>
+- **Porque:** <el volumen es acotado, app.expiry-interval es configurable y no añade infra extra al stack WebFlux + PostgreSQL que ya usa el proyecto>
+- **Se rompe si:** <hay varias réplicas sin coordinación: cada instancia ejecutaría el mismo barrido; en producción haría falta un lock distribuido o un único worker de expiración>

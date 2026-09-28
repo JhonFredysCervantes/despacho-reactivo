@@ -9,8 +9,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/reports")
+//@RestController
+//@RequestMapping("/api/reports")
 public class ReportController {
 
     private final ReportService reportService;
