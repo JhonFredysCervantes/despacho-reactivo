@@ -68,7 +68,7 @@ public class Despacho {
     public void setCiudad(String ciudad) { this.ciudad = ciudad; }
 
     public List<Paquete> getPaquetes() { return paquetes; }
-    public int totalPaquetes() { return paquetes != null ? paquetes.size() : 0; }
+
     public void setPaquetes(List<Paquete> paquetes) { this.paquetes = paquetes; }
 
     public String getEstado() { return estado; }
@@ -91,4 +91,6 @@ public class Despacho {
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    public int totalPaquetes() { return paquetes != null ? paquetes.size() : 0; }
 }

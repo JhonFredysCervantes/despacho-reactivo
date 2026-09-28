@@ -4,6 +4,9 @@ import com.despachoreactivo.project.exception.CupoInsuficienteException;
 import com.despachoreactivo.project.exception.ValidacionException;
 import com.despachoreactivo.project.exception.VehiculoNoExisteException;
 import com.despachoreactivo.project.model.Paquete;
+import com.despachoreactivo.project.model.PaqueteReservado;
+import com.despachoreactivo.project.model.ReservaCupo;
+import com.despachoreactivo.project.model.ResultadoReserva;
 import com.despachoreactivo.project.repository.PaqueteRepository;
 import com.despachoreactivo.project.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
@@ -25,12 +28,6 @@ public class AsignacionSaga {
             PaqueteRepository paqueteRepository) {
         this.vehiculoRepository = vehiculoRepository;
         this.paqueteRepository = paqueteRepository;
-    }
-
-    public record ReservaCupo(Long vehiculoId, Integer pesoKg) {
-    }
-
-    public record ResultadoReserva(List<Paquete> paquetes, List<ReservaCupo> reservas) {
     }
 
     public Mono<ResultadoReserva> reservarPaquetes(String ciudad, List<Paquete> paquetes) {
@@ -108,8 +105,5 @@ public class AsignacionSaga {
                         .map(vehiculo -> v.getId()))
                 .next()
                 .switchIfEmpty(Mono.error(new CupoInsuficienteException()));
-    }
-
-    private record PaqueteReservado(Paquete paquete, ReservaCupo reserva) {
     }
 }
