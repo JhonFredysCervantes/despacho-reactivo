@@ -72,6 +72,56 @@ curl -X GET "http://localhost:8081/api/vehiculos" \
   -H "Content-Type: application/json"
 ```
 
+#### 1️⃣ bis Carga masiva de vehículos (NDJSON) — Windows / PowerShell
+
+En PowerShell usa **`curl.exe`** (no el alias `curl`). La app debe estar en marcha (`./gradlew bootRun`) y PostgreSQL arriba (`docker compose up -d`).
+
+**1. Crear el archivo** `vehiculos.ndjson` (UTF-8 sin BOM; funciona en PowerShell 5.1 y 7+):
+
+```powershell
+cd C:\RepositoriosGitHub\despacho-reactivo
+
+$body = @'
+{"id":1,"placa":"ABC123","ciudad":"BOG","cupoKg":500,"reservadoKg":0}
+{"id":2,"placa":"XYZ987","ciudad":"MDE","cupoKg":200,"reservadoKg":0}
+'@
+
+[System.IO.File]::WriteAllText(
+    (Join-Path $PWD "vehiculos.ndjson"),
+    $body,
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+Get-Content .\vehiculos.ndjson
+```
+
+**2. Enviar el bulk:**
+
+```powershell
+curl.exe -i -X POST "http://localhost:8081/api/vehiculos/bulk" `
+  -H "Content-Type: application/x-ndjson" `
+  -H "Accept: application/json" `
+  --data-binary "@vehiculos.ndjson"
+```
+
+En una sola línea:
+
+```powershell
+curl.exe -i -X POST "http://localhost:8081/api/vehiculos/bulk" -H "Content-Type: application/x-ndjson" -H "Accept: application/json" --data-binary "@vehiculos.ndjson"
+```
+
+**Respuesta esperada:** HTTP 200 con JSON de resumen (p. ej. cantidad de registros procesados/afectados).
+
+**Errores frecuentes:**
+
+| Síntoma | Causa |
+|---------|--------|
+| `Connection refused` | La app no está en el puerto 8081 |
+| Error 500 | Postgres no está corriendo |
+| ParserError al pegar JSON | Falta el bloque `@' ... '@` al crear el archivo |
+
+En Linux/macOS/Git Bash puedes usar el mismo `curl` con `--data-binary "@vehiculos.ndjson"` y crear el `.ndjson` con un editor (una línea JSON por vehículo).
+
 #### 2️⃣ Crear un despacho
 ```bash
 curl -X POST "http://localhost:8081/api/despachos" \
